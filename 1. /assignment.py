@@ -72,7 +72,7 @@ def load_stopwords(filename):
 # Note that this should work for any n, not just unigrams and bigrams
 def ngrams(tokens, n):
     # Returns all ngrams of size n in sentence, where an ngram is itself a list of tokens
-    return [tokens[start:start+n] for start in range(len(tokens) - n + 1)]  # ASSIGNMENT: Replace this with your code
+    return [tokens[start:start+n] for start in range(len(tokens) - n + 1)]  
 
 def filter_punctuation_bigrams(ngrams):
     # Input: assume ngrams is a list of ['token1','token2'] bigrams
@@ -86,7 +86,7 @@ def filter_stopword_bigrams(ngrams, stopwords):
     # Input: assume ngrams is a list of ['token1','token2'] bigrams, stopwords is a set of words like 'the'
     # Removes ngrams like ['in','the'] and ['senator','from'] where either word is a stopword
     # Returns list with the items that were not removed
-    return ngrams # ASSIGNMENT: Replace this line with your code.
+    return [ngram for ngram in ngrams if ngram[0] not in stopwords and ngram[1] not in stopwords]
 
 
 def normalize_tokens(tokenlist):
@@ -97,7 +97,12 @@ def normalize_tokens(tokenlist):
     #   - All handles (tokens starting with @) have been filtered out
     #   - Any underscores have been replaced with + (since we use _ as a special character in bigrams)
 
-    normalized_tokens = tokenlist # ASSIGNMENT: replace with your code
+    normalized_tokens = []
+    for token in tokenlist:
+        if token[0] != ' ' and token[0] != '@':
+            lowercase = token.lower()
+            underscore = re.sub('_', '+', lowercase)
+            normalized_tokens.append(underscore)
     
     return normalized_tokens
 
@@ -127,19 +132,28 @@ def collect_bigram_counts(lines, stopwords, remove_stopword_bigrams = False):
     # Iterate through raw text lines
     for line in tqdm(lines):
 
-        pass # ASSIGNMENT: placeholder for your code
-
         # Call spacy and get tokens
-
+        spacy_analysis = nlp(line)
+        spacy_tokens = [token.orth_ for token in spacy_analysis]
+        
         # Normalize 
-
+        normalized_tokens = normalize_tokens(spacy_tokens)
+        
         # Get bigrams
+        bigrams = ngrams(normalized_tokens, 2) 
 
         # Filter out bigrams where either token is punctuation
+        bigrams = filter_punctuation_bigrams(bigrams)
         
         # Optionally filter bigrams where either word is a stopword
+        if remove_stopword_bigrams:
+            bigrams = filter_stopword_bigrams(bigrams, stopwords)
+        bigram_tokens = ["_".join(bigram) for bigram in bigrams]
+        # print(bigram_tokens)
         
         # Increment bigram counts
+        for bigram in bigram_tokens:
+            counter[bigram] += 1
 
     return counter
 
@@ -152,14 +166,12 @@ def print_sorted_items(dict, n=10, order='ascending'):
     for key, value in ranked[:n] :
         print(key, value)
 
-
-
 ################################################################
 # Main
 ################################################################
 
 # Hard-wired variables
-#input_speechfile   = "./speeches2020.jsonl.gz"
+# input_speechfile   = "./speeches2020.jsonl.gz"
 input_speechfile   = "./speeches2020_jan_to_jun.jsonl.gz"
 text_dems          = "./speeches_dem.txt"
 text_reps          = "./speeches_rep.txt"
