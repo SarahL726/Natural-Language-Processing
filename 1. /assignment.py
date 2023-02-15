@@ -38,7 +38,13 @@ def read_and_clean_lines(infile):
     lines = []
     with gzip.open(infile,'rt') as f:
         for line in tqdm(f):
-            pass   # ASSIGNMENT: replace this with your code
+            # Load the json line
+            curr_line = json.loads(line)
+
+            # Filter any results that weren't from the Senate
+            if curr_line['chamber'].lower() == 'senate':
+                cleaned = re.compile(r'\s+').sub(' ', curr_line['text'])
+                lines.append(curr_line['party'] + '\t' + cleaned)
     return(lines)
 
 # Input: lines containing <party> TAB <text>
@@ -54,7 +60,9 @@ def write_party_speeches(lines, outfile, party_to_write):
 # Read a set of stoplist words from filename, assuming it contains one word per line
 # Return a python Set data structure (https://www.w3schools.com/python/python_sets.asp)
 def load_stopwords(filename):
-    stopwords = [] # ASSIGNMENT: replace this with your code
+    stopwords = [] 
+    with codecs.open(filename, 'r', encoding='ascii', errors='ignore') as fp:
+        stopwords = fp.read().split('\n')
     return set(stopwords)
 
 # Take a list of string tokens and return all ngrams of length n,
@@ -64,7 +72,7 @@ def load_stopwords(filename):
 # Note that this should work for any n, not just unigrams and bigrams
 def ngrams(tokens, n):
     # Returns all ngrams of size n in sentence, where an ngram is itself a list of tokens
-    return []  # ASSIGNMENT: Replace this with your code
+    return [tokens[start:start+n] for start in range(len(tokens) - n + 1)]  # ASSIGNMENT: Replace this with your code
 
 def filter_punctuation_bigrams(ngrams):
     # Input: assume ngrams is a list of ['token1','token2'] bigrams
