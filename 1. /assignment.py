@@ -97,14 +97,7 @@ def normalize_tokens(tokenlist):
     #   - All handles (tokens starting with @) have been filtered out
     #   - Any underscores have been replaced with + (since we use _ as a special character in bigrams)
 
-    normalized_tokens = []
-    for token in tokenlist:
-        if token[0] != ' ' and token[0] != '@':
-            lowercase = token.lower()
-            underscore = re.sub('_', '+', lowercase)
-            normalized_tokens.append(underscore)
-    
-    return normalized_tokens
+    return [token.lower().replace('_',"+") for token in tokenlist if token[0] != ' ' and token[0] != '@']
 
 def collect_bigram_counts(lines, stopwords, remove_stopword_bigrams = False):
     # Input lines is a list of raw text strings, stopwords is a set of stopwords
@@ -133,11 +126,10 @@ def collect_bigram_counts(lines, stopwords, remove_stopword_bigrams = False):
     for line in tqdm(lines):
 
         # Call spacy and get tokens
-        spacy_analysis = nlp(line)
-        spacy_tokens = [token.orth_ for token in spacy_analysis]
+        tokens = [token.orth_ for token in nlp(line)]
         
         # Normalize 
-        normalized_tokens = normalize_tokens(spacy_tokens)
+        normalized_tokens = normalize_tokens(tokens)
         
         # Get bigrams
         bigrams = ngrams(normalized_tokens, 2) 
@@ -149,7 +141,6 @@ def collect_bigram_counts(lines, stopwords, remove_stopword_bigrams = False):
         if remove_stopword_bigrams:
             bigrams = filter_stopword_bigrams(bigrams, stopwords)
         bigram_tokens = ["_".join(bigram) for bigram in bigrams]
-        # print(bigram_tokens)
         
         # Increment bigram counts
         for bigram in bigram_tokens:
