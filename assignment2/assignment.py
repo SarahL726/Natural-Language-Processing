@@ -19,7 +19,7 @@ from assignment1_fns import *
 
 
 # Convenient for debugging but feel free to comment out
-from traceback_with_variables import activate_by_import
+# from traceback_with_variables import activate_by_import
 
 # Hard-wired variables
 input_speechfile   = "./speeches2020_jan_to_jun.jsonl.gz"
@@ -41,7 +41,18 @@ def read_and_clean_lines(infile):
     print("\nReading and cleaning text from {}".format(infile))
     lines = []
     parties = []
-    # TO DO: Your code goes here
+    
+    with gzip.open(infile,'rt') as f:
+        for line in tqdm(f):
+            # Load the json line
+            curr_line = json.loads(line)
+
+            # Filter any results that weren't from the Senate
+            if curr_line['chamber'] == 'Senate':
+                cleaned = re.compile(r'\s+').sub(' ', curr_line['text'])
+                lines.append(cleaned)
+                parties.append(curr_line['party'])
+
     print("Read {} documents".format(len(lines)))
     print("Read {} labels".format(len(parties)))
     return lines, parties
@@ -66,7 +77,7 @@ def load_stopwords(filename):
 # This function should return those four values
 def split_training_set(lines, labels, test_size=0.3, random_seed=42):
     # TO DO: replace this line with a call to train_test_split
-    X_train, X_test, y_train, y_test = np.array([]), np.array([]), np.array([]), np.array([]) 
+    X_train, X_test, y_train, y_test = train_test_split(lines, labels, test_size=test_size, random_state=random_seed)
     print("Training set label counts: {}".format(Counter(y_train)))
     print("Test set     label counts: {}".format(Counter(y_test)))
     return X_train, X_test, y_train, y_test
@@ -147,7 +158,7 @@ def convert_lines_to_feature_strings(lines, stopwords, remove_stopword_bigrams=T
         # then feature_string should be 'coffee cup coffee_cup white_house'
 
         # TO DO: replace this line with your code
-        feature_string = [] 
+        feature_string = ' '.join(unigrams) + ' ' + ' '.join(bigram_tokens)
 
         # Add this feature string to the output
         all_features.append(feature_string)
