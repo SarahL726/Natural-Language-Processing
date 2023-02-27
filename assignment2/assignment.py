@@ -17,6 +17,10 @@ from collections import Counter
 from spacy.lang.en import English
 from assignment1_fns import *
 
+from imblearn.over_sampling import RandomOverSampler, SMOTE
+from llr import *
+
+
 
 # Convenient for debugging but feel free to comment out
 # from traceback_with_variables import activate_by_import
@@ -24,6 +28,7 @@ from assignment1_fns import *
 # Hard-wired variables
 input_speechfile   = "./speeches2020_jan_to_jun.jsonl.gz"
 stopwords_file     = "./mallet_en_stoplist.txt"
+# stopwords_file     = "./new_legis_proc_jargon_stopwords.txt"
 
 
 # This is the similar to read_and_clean_lines in the previous assignment, but
@@ -41,14 +46,14 @@ def read_and_clean_lines(infile):
     print("\nReading and cleaning text from {}".format(infile))
     lines = []
     parties = []
-    
+    # TO DO: Your code goes here
     with gzip.open(infile,'rt') as f:
         for line in tqdm(f):
             # Load the json line
             curr_line = json.loads(line)
 
             # Filter any results that weren't from the Senate
-            if curr_line['chamber'] == 'Senate':
+            if curr_line['chamber'].lower() == 'senate':
                 cleaned = re.compile(r'\s+').sub(' ', curr_line['text'])
                 lines.append(cleaned)
                 parties.append(curr_line['party'])
@@ -63,7 +68,7 @@ def load_stopwords(filename):
     stopwords = []
     with codecs.open(filename, 'r', encoding='ascii', errors='ignore') as fp:
         stopwords = fp.read().split('\n')
-    return set(stopwords)
+    return list(stopwords)
 
 
 # Call sklearn's train_test_split function to split the dataset into training items/labels
@@ -158,8 +163,8 @@ def convert_lines_to_feature_strings(lines, stopwords, remove_stopword_bigrams=T
         # then feature_string should be 'coffee cup coffee_cup white_house'
 
         # TO DO: replace this line with your code
-        feature_string = ' '.join(unigrams) + ' ' + ' '.join(bigram_tokens)
-
+        feature_string = ' '.join(unigrams + bigram_tokens)
+        
         # Add this feature string to the output
         all_features.append(feature_string)
 
@@ -171,7 +176,7 @@ def convert_lines_to_feature_strings(lines, stopwords, remove_stopword_bigrams=T
 # For both classes, print the n most heavily weighted features in this classifier.
 def most_informative_features(vectorizer, classifier, n=20):
     # Adapted from https://stackoverflow.com/questions/11116697/how-to-get-most-informative-features-for-scikit-learn-classifiers#11116960
-    feature_names       = vectorizer.get_feature_names()
+    feature_names       = vectorizer.get_feature_names_out()
     coefs_with_features = sorted(zip(classifier.coef_[0], feature_names))
     top                 = zip(coefs_with_features[:n], coefs_with_features[:-(n + 1):-1])
     for (coef_1, feature_1), (coef_2, feature_2) in top:
@@ -201,9 +206,13 @@ def main(use_sklearn_feature_extraction, num_most_informative, plot_metrics):
         X_test_documents        = convert_lines_to_feature_strings(X_test,  stop_words)
         
         # Call CountVectorizer with whitespace-based tokenization as the analyzer, so that it uses exactly your features,
-        # but without doing any of its own analysis/feature-extraction.
+        # but without doing any of its own analysis/feature-extraction.  
         X_features_train, training_vectorizer = convert_text_into_features(X_train_feature_strings, stop_words, whitespace_tokenizer)
-        
+    
+    # ros = RandomOverSampler(random_state=0)
+    X_features_train, y_train = SMOTE().fit_resample(X_features_train, y_train)
+    print("New training set label counts: {}".format(Counter(y_train)))
+
     # Create a logistic regression classifier trained on the featurized training data
     lr_classifier = LogisticRegression(solver='liblinear')
     lr_classifier.fit(X_features_train, y_train)
@@ -226,8 +235,8 @@ def main(use_sklearn_feature_extraction, num_most_informative, plot_metrics):
     
     if plot_metrics:
         print("Generating plots")
-        metrics.plot_confusion_matrix(lr_classifier, X_test_features, y_test, normalize='true')
-        metrics.plot_roc_curve(lr_classifier, X_test_features, y_test)
+        metrics.ConfusionMatrixDisplay.from_estimator(lr_classifier, X_test_features, y_test, normalize='true')
+        metrics.RocCurveDisplay.from_estimator(lr_classifier, X_test_features, y_test)
         plt.show()
 
 if __name__ == "__main__":
