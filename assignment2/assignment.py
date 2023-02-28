@@ -19,6 +19,7 @@ from assignment1_fns import *
 
 from imblearn.over_sampling import RandomOverSampler, SMOTE
 from llr import *
+from LlrReduction import *
 
 
 
@@ -169,7 +170,7 @@ def convert_lines_to_feature_strings(lines, stopwords, remove_stopword_bigrams=T
         all_features.append(feature_string)
 
 
-    print(" Feature string for first document: '{}'".format(all_features[0]))
+    # print(" Feature string for first document: '{}'".format(all_features[0]))
         
     return all_features
 
@@ -185,7 +186,15 @@ def most_informative_features(vectorizer, classifier, n=20):
 # Split on whitespace, e.g. "a    b_c  d" returns tokens ['a','b_c','d']
 def whitespace_tokenizer(line):
     return line.split()
-        
+
+# Use Log-likelihood ratio(Llr) to keep "useful" features
+# llr_factor: keep the top [llr_factor] part of the related features
+def llr_reduce_feature(X_train_feature_strings, X_test_documents, y_train, stopwords, llr_factor=0.2):
+    llr = LlrReduction(X_train_feature_strings, y_train, X_test_documents)
+    X_train_feature_strings, X_test_documents = llr.reduce_features(llr_factor, 'Democrat', 'Republican', 25)
+    X_features_train, training_vectorizer = convert_text_into_features(X_train_feature_strings, stopwords, whitespace_tokenizer)
+    return X_features_train, training_vectorizer, X_test_documents
+  
 def main(use_sklearn_feature_extraction, num_most_informative, plot_metrics):
     stop_words = load_stopwords(stopwords_file)
 
@@ -208,10 +217,12 @@ def main(use_sklearn_feature_extraction, num_most_informative, plot_metrics):
         # Call CountVectorizer with whitespace-based tokenization as the analyzer, so that it uses exactly your features,
         # but without doing any of its own analysis/feature-extraction.  
         X_features_train, training_vectorizer = convert_text_into_features(X_train_feature_strings, stop_words, whitespace_tokenizer)
+        X_features_train, training_vectorizer, X_test_documents = llr_reduce_feature(X_train_feature_strings, X_test_documents, y_train, stop_words)
     
     # ros = RandomOverSampler(random_state=0)
-    X_features_train, y_train = SMOTE().fit_resample(X_features_train, y_train)
-    print("New training set label counts: {}".format(Counter(y_train)))
+    # X_features_train, y_train = ros.fit_resample(X_features_train, y_train)
+    # X_features_train, y_train = SMOTE().fit_resample(X_features_train, y_train)
+    # print("New training set label counts: {}".format(Counter(y_train)))
 
     # Create a logistic regression classifier trained on the featurized training data
     lr_classifier = LogisticRegression(solver='liblinear')
