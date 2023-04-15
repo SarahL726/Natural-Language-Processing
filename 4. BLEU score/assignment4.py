@@ -55,7 +55,9 @@ def run_experiment(input_speechfile, stopwords_file, use_sklearn_feature_extract
     # and https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.StratifiedKFold.html
     # Note that if you use stratified split() it needs to include y_train (i.e. labels) so it knows the proportion of labels in the original training set.
     print("Doing cross-validation splitting with stratify={}. Showing 10 indexes for items in train/test splits in {} folds.".format(stratify,num_folds))
-    kfold = None # Replace this with appropriate function call to create cross-validation object
+    kfold = KFold(n_splits=num_folds) # Replace this with appropriate function call to create cross-validation object
+    if stratify:
+        kfold = StratifiedKFold(n_splits=num_folds)
         
     # Create the classifier object
     classifier = LogisticRegression(solver='liblinear')
@@ -66,7 +68,7 @@ def run_experiment(input_speechfile, stopwords_file, use_sklearn_feature_extract
     # The cross_val_score expects classifier, feature-vectorized docs, labels, evaluation score to use ('accuracy'), and  the kfold object
     # Use accuracy, but for other evaluation scores you can see https://scikit-learn.org/stable/modules/model_evaluation.html
     print("Running {}-fold cross-validation on {}% of the data, still holding out the rest for final testing.".format(num_folds,(1-test_size)*100))
-    accuracy_scores = [0]*num_folds # Replace this line with your call to cross_val_score()
+    accuracy_scores = cross_val_score(classifier, X_features_train, y_train, scoring='accuracy', cv=kfold)
     print("accuracy scores = {}, mean = {}, stdev = {}".format(accuracy_scores, np.mean(accuracy_scores), np.std(accuracy_scores)))
 
 
@@ -90,5 +92,6 @@ if __name__ == "__main__":
                        float(args.test_size),
                        int(args.num_folds),
                        args.stratify,
-                       int(args.seed))
+                       int(args.seed)
+                       )
 
